@@ -78,3 +78,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 Juan Bautista Espino - [@JBE10](https://github.com/JBE10)
 
 Link del proyecto: [https://github.com/JBE10/SIP-Backend](https://github.com/JBE10/SIP-Backend)
+
+# Nota de Deploy
+Este proyecto está configurado para usar Nixpacks en Railway, sin necesidad de Dockerfile.
