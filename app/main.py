@@ -26,6 +26,7 @@ except Exception as e:
 
 # CORS para permitir conexión desde Vercel y Railway
 origins = [
+    "https://sip-gray.vercel.app",
     "https://sportsmatch.vercel.app",
     "https://sip-production.up.railway.app",
     "http://localhost:3000",
