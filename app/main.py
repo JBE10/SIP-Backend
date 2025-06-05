@@ -105,8 +105,8 @@ def get_matches(
     return []
 
 # Rutas de archivos
-@app.post("/users/upload-photo")
-async def upload_photo(
+@app.post("/upload-profile-picture")
+async def upload_profile_picture(
     file: UploadFile = File(...),
     current_user: schemas.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
@@ -123,24 +123,24 @@ async def upload_photo(
     # Generar nombre único para el archivo
     file_extension = file.filename.split(".")[-1]
     unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = f"app/static/uploads/{unique_filename}"
+    file_path = f"static/{unique_filename}"
     
     # Guardar el archivo
     with open(file_path, "wb") as buffer:
         buffer.write(content)
     
     # Actualizar la URL de la foto en la base de datos
-    photo_url = f"http://localhost:8000/static/uploads/{unique_filename}"
+    foto_url = f"https://web-production-07ed64.up.railway.app/static/{unique_filename}"
     db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-    db_user.foto_url = photo_url
+    db_user.foto_url = foto_url
     db.commit()
     db.refresh(db_user)
     
-    return {"message": "Foto subida exitosamente", "foto_url": photo_url}
+    return {"message": "Foto subida exitosamente", "foto_url": foto_url}
 
 # Asegúrate de que la carpeta exista
-os.makedirs("app/static/uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+os.makedirs("static", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
