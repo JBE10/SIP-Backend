@@ -1,25 +1,11 @@
-# SIP-Backend
+# SportMatch Backend
 
-Backend para la aplicación Sport Match, un sistema de gestión de partidos deportivos.
+Backend de la aplicación SportMatch construido con FastAPI.
 
-## Descripción
+## Requisitos
 
-Este proyecto es el backend de la aplicación Sport Match, desarrollado para gestionar partidos deportivos, usuarios, instalaciones y reservas.
-
-## Tecnologías Utilizadas
-
-- Node.js
-- Express.js
-- MongoDB
-- TypeScript
-- JWT para autenticación
-- Docker
-
-## Requisitos Previos
-
-- Node.js (v18 o superior)
-- MongoDB
-- npm o yarn
+- Python 3.8+
+- PostgreSQL (local o en Railway)
 
 ## Instalación
 
@@ -29,72 +15,63 @@ git clone https://github.com/JBE10/SIP-Backend.git
 cd SIP-Backend
 ```
 
-2. Instalar dependencias:
+2. Crear y activar un entorno virtual:
 ```bash
-npm install
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 ```
 
-3. Configurar variables de entorno:
+3. Instalar dependencias:
+```bash
+pip install -r requirements.txt
+```
+
+4. Configurar variables de entorno:
 ```bash
 cp .env.example .env
+# Editar .env con tus configuraciones
 ```
-Editar el archivo `.env` con tus configuraciones.
 
-4. Iniciar el servidor:
+## Desarrollo
+
+Para ejecutar el servidor de desarrollo:
 ```bash
-npm run dev
+uvicorn app.main:app --reload
 ```
+
+La API estará disponible en `http://localhost:8000`
+
+## Documentación
+
+La documentación de la API está disponible en:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## Despliegue
+
+El proyecto está configurado para desplegarse en Railway. El archivo `Procfile` contiene la configuración necesaria para el despliegue.
 
 ## Estructura del Proyecto
 
 ```
-src/
-├── config/         # Configuraciones
-├── controllers/    # Controladores
-├── models/        # Modelos de datos
-├── routes/        # Rutas de la API
-├── services/      # Servicios
-├── types/         # Tipos TypeScript
-└── utils/         # Utilidades
+.
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── auth.py
+│   └── static/
+│       └── uploads/
+├── requirements.txt
+├── Procfile
+└── .env.example
 ```
-
-## API Endpoints
-
-### Autenticación
-- POST /api/auth/register - Registro de usuarios
-- POST /api/auth/login - Inicio de sesión
-
-### Usuarios
-- GET /api/users - Obtener usuarios
-- GET /api/users/:id - Obtener usuario por ID
-- PUT /api/users/:id - Actualizar usuario
-- DELETE /api/users/:id - Eliminar usuario
-
-### Instalaciones
-- GET /api/facilities - Obtener instalaciones
-- POST /api/facilities - Crear instalación
-- GET /api/facilities/:id - Obtener instalación por ID
-- PUT /api/facilities/:id - Actualizar instalación
-- DELETE /api/facilities/:id - Eliminar instalación
-
-### Partidos
-- GET /api/matches - Obtener partidos
-- POST /api/matches - Crear partido
-- GET /api/matches/:id - Obtener partido por ID
-- PUT /api/matches/:id - Actualizar partido
-- DELETE /api/matches/:id - Eliminar partido
-
-## Contribución
-
-1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
 
 ## Licencia
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
 ## Contacto
 
