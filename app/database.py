@@ -3,12 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Obtener DATABASE_URL de las variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Verificar que DATABASE_URL esté definida
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL no está definida en las variables de entorno")
+# Obtener DATABASE_URL de las variables de entorno o usar la URL por defecto
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:bRGGofTEDOQEHAyPHzRZyAlCMguNCPHI@switchback.proxy.rlwy.net:46469/railway")
 
 print(f"🔗 Conectando a la base de datos: {DATABASE_URL[:30]}...")
 
