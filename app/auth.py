@@ -93,3 +93,34 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db.commit()
     db.refresh(new_user)
     return {"message": "Usuario registrado correctamente"}
+
+@router.put("/profile/update")
+def update_profile(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    update_data = user_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": "Perfil actualizado correctamente",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "edad": user.age,
+            "location": user.location,
+            "descripcion": user.descripcion,
+            "foto_url": user.foto_url,
+            "deportes_preferidos": user.deportes_preferidos
+        }
+    }

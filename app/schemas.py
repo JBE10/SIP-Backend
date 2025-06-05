@@ -28,12 +28,14 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
+    email: Optional[EmailStr] = None
     deportes_preferidos: Optional[str] = None
     descripcion: Optional[str] = None
     foto_url: Optional[str] = None
     video_url: Optional[str] = None
     age: Optional[int] = None
     location: Optional[str] = None
+    profilePicture: Optional[str] = None
 
 class User(UserBase):
     id: int
