@@ -82,10 +82,9 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         username=user.username,
         email=user.email,
         password=hashed_pw,
-        deportes_preferidos=user.deportes_preferidos,
-        descripcion=user.descripcion,
-        foto_url=user.foto_url,
-        video_url=user.video_url,
+        sports=user.sports,
+        description=user.description,
+        profile_picture=user.profile_picture,
         age=user.age,
         location=user.location
     )
@@ -119,8 +118,8 @@ def update_profile(
             "email": user.email,
             "edad": user.age,
             "location": user.location,
-            "descripcion": user.descripcion,
-            "foto_url": user.foto_url,
-            "deportes_preferidos": user.deportes_preferidos
+            "description": user.description,
+            "profile_picture": user.profile_picture,
+            "sports": user.sports
         }
     }
