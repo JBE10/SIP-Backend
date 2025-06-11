@@ -9,10 +9,9 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
 
-    deportes_preferidos = Column(String(255))  # Ej: "Fútbol,Tenis"
-    descripcion = Column(Text)
-    foto_url = Column(String(255))
-    video_url = Column(String(255))
+    sports = Column(String(255))  # Ej: "Fútbol,Tenis"
+    description = Column(Text)
+    profile_picture = Column(String(255))
     age = Column(Integer)
     location = Column(String(100))
 
