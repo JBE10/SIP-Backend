@@ -5,6 +5,7 @@ from typing import List
 from . import models, schemas, auth, database
 from .database import Base, engine
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 import os
 import uuid
 from dotenv import load_dotenv
@@ -13,7 +14,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# ✅ CORS (SOLO UNA VEZ, y correctamente configurado)
+# ✅ CORS
 origins = [
     "https://sip-gray.vercel.app",
     "https://sportsmatch.vercel.app",
@@ -24,7 +25,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # o ["*"] para desarrollo
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,14 +67,24 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/users/me", response_model=schemas.User)
-def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
-    return current_user
+@app.get("/users/me")
+def get_user_profile(current_user: models.User = Depends(auth.get_current_user)):
+    return JSONResponse({
+        "id": current_user.id,
+        "username": current_user.username,
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "age": current_user.age,
+        "location": current_user.location,
+        "description": current_user.description,
+        "profile_picture": current_user.profile_picture,
+        "sports": current_user.sports or ""
+    })
 
 @app.put("/users/me", response_model=schemas.User)
 def update_user(
         user_update: schemas.UserUpdate,
-        current_user: schemas.User = Depends(auth.get_current_user),
+        current_user: models.User = Depends(auth.get_current_user),
         db: Session = Depends(get_db)
 ):
     db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
@@ -89,7 +100,7 @@ def update_user(
 
 @app.get("/matches", response_model=List[schemas.User])
 def get_matches(
-        current_user: schemas.User = Depends(auth.get_current_user),
+        current_user: models.User = Depends(auth.get_current_user),
         db: Session = Depends(get_db)
 ):
     return []
@@ -97,7 +108,7 @@ def get_matches(
 @app.post("/upload-profile-picture")
 async def upload_profile_picture(
         file: UploadFile = File(...),
-        current_user: schemas.User = Depends(auth.get_current_user),
+        current_user: models.User = Depends(auth.get_current_user),
         db: Session = Depends(get_db)
 ):
     if not file.content_type.startswith("image/"):

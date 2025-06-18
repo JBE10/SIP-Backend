@@ -5,23 +5,21 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from . import models
-from . import database
-from . import schemas
+from . import models, database, schemas
 from .models import User
 from app.schemas import User as UserSchema
 
 router = APIRouter()
 
-# JWT Configuration
+# Configuración de JWT
 SECRET_KEY = "clave-super-secreta"  # ⚠️ Cambiar en producción
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# OAuth2 scheme
+# Autenticación con OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Password hashing
+# Hasheo de contraseñas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -34,10 +32,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)) -> User:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)) -> models.User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Token inválido",
@@ -56,6 +53,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+# LOGIN
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
@@ -73,7 +71,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer",
         "user": {
             "id": user.id,
-            "name": user.username,
+            "username": user.username,
+            "full_name": user.full_name,
             "email": user.email,
             "description": user.description,
             "sports": user.sports,
@@ -83,16 +82,20 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         }
     }
 
-
+# REGISTER (✅ corregido para devolver access_token)
 @router.post("/register")
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    existing_user = db.query(models.User).filter(models.User.email == str(user.email)).first()
-    if existing_user:
+    if db.query(models.User).filter(models.User.email == str(user.email)).first():
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
+    if db.query(models.User).filter(models.User.username == user.username).first():
+        raise HTTPException(status_code=400, detail="Nombre de usuario ya registrado")
+
     hashed_pw = get_password_hash(user.password)
+
     new_user = models.User(
         username=user.username,
+        full_name=user.full_name,
         email=str(user.email),
         password=hashed_pw,
         sports=user.sports,
@@ -101,6 +104,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         age=user.age,
         location=user.location
     )
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -112,7 +116,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         "token_type": "bearer",
         "user": {
             "id": new_user.id,
-            "name": new_user.username,
+            "username": new_user.username,
+            "full_name": new_user.full_name,
             "email": new_user.email,
             "description": new_user.description,
             "sports": new_user.sports,
@@ -122,7 +127,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         }
     }
 
-
+# UPDATE
 @router.put("/profile/update")
 def update_profile(
         user_update: schemas.UserUpdate,
@@ -145,6 +150,7 @@ def update_profile(
         "user": {
             "id": user.id,
             "username": user.username,
+            "full_name": user.full_name,
             "email": user.email,
             "age": user.age,
             "location": user.location,
@@ -154,15 +160,7 @@ def update_profile(
         }
     }
 
-@router.get("/users/me")
-def get_user_profile(current_user: UserSchema = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "email": current_user.email,
-        "age": current_user.age,
-        "location": current_user.location,
-        "description": current_user.description,
-        "profile_picture": current_user.profile_picture,
-        "sports": current_user.sports
-    }
+# PROFILE
+@router.get("/users/me", response_model=schemas.User)
+def get_user_profile(current_user: models.User = Depends(get_current_user)):
+    return current_user

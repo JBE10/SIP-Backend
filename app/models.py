@@ -5,13 +5,13 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False)
+    username = Column(String(50), unique=True, nullable=False)  # único
+    full_name = Column(String(100), nullable=False)              # ← nuevo
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-
-    sports = Column(String(255))            # Ej: "Fútbol,Tenis"
-    description = Column(Text)              # Descripción personal
-    profile_picture = Column(String(255))   # URL de foto de perfil
+    sports = Column(String(255))
+    description = Column(Text)
+    profile_picture = Column(String(255))
     age = Column(Integer)
     location = Column(String(100))
 
