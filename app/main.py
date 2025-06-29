@@ -7,7 +7,6 @@ from . import schemas
 from . import auth
 from . import database
 from .database import Base, engine
-import app.models  # Importar para que registre las tablas
 from fastapi.staticfiles import StaticFiles
 import os
 import uuid
@@ -70,6 +69,16 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "database": "connected"}
+
+# Endpoint de prueba para diagnosticar problemas
+@app.get("/test-db")
+def test_database(db: Session = Depends(get_db)):
+    try:
+        # Intentar hacer una consulta simple
+        result = db.execute("SELECT 1")
+        return {"status": "success", "message": "Base de datos funcionando correctamente"}
+    except Exception as e:
+        return {"status": "error", "message": f"Error en base de datos: {str(e)}"}
 
 # Rutas de usuarios
 @app.get("/users/me", response_model=schemas.User)
