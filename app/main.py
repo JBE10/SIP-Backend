@@ -750,6 +750,8 @@ async def test_register():
         db.rollback()
         return {"error": str(e)}
 
+# Forzar reinicio de Railway - 2025-07-01
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
