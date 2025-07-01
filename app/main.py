@@ -383,10 +383,15 @@ def get_base_url():
     # Si estamos en Railway, usar la URL de Railway
     railway_environment = os.getenv("RAILWAY_ENVIRONMENT")
     railway_project_id = os.getenv("RAILWAY_PROJECT_ID")
+    port = os.getenv("PORT")
     
+    # Si hay PORT definido (Railway), estamos en producción
+    if port:
+        return "https://web-production-07ed64.up.railway.app"
+    
+    # Si estamos en Railway pero no hay PORT, usar la URL conocida
     if railway_environment and railway_project_id:
-        # Intentar construir la URL de Railway
-        return f"https://web-production-07ed64.up.railway.app"
+        return "https://web-production-07ed64.up.railway.app"
     
     # Por defecto, usar localhost
     return "http://localhost:8000"
