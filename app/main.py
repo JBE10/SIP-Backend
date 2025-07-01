@@ -213,9 +213,19 @@ async def test_upload(file: UploadFile = File(...)):
         return {"status": "error", "message": str(e)}
 
 # Rutas de usuarios
-@app.get("/users/me", response_model=schemas.User)
+@app.get("/users/me")
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
-    return current_user
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "age": current_user.age,
+        "location": current_user.location,
+        "descripcion": current_user.descripcion or "",
+        "foto_url": current_user.foto_url,
+        "video_url": current_user.video_url,
+        "deportes_preferidos": current_user.deportes_preferidos or ""
+    }
 
 @app.put("/users/me", response_model=schemas.User)
 def update_user(
