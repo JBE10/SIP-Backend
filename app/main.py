@@ -266,14 +266,65 @@ def update_user(
     return db_user
 
 # Rutas de matches
-@app.get("/matches", response_model=List[schemas.User])
-def get_matches(
+@app.get("/matches")
+async def get_matches(
     current_user: schemas.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Aquí iría la lógica para obtener los matches
-    # Por ahora, devolvemos una lista vacía
-    return []
+    try:
+        print(f"🔍 Obteniendo matches para usuario {current_user.id}")
+        
+        # Buscar todos los matches donde el usuario actual participa
+        matches = db.query(models.Match).filter(
+            (models.Match.user1_id == current_user.id) | 
+            (models.Match.user2_id == current_user.id)
+        ).all()
+        
+        match_users = []
+        for match in matches:
+            # Determinar quién es el otro usuario en el match
+            other_user_id = match.user2_id if match.user1_id == current_user.id else match.user1_id
+            
+            # Obtener información del otro usuario
+            other_user = db.query(models.User).filter(models.User.id == other_user_id).first()
+            
+            if other_user:
+                # Parsear deportes del usuario
+                def parse_sports(sports_str):
+                    if not sports_str:
+                        return []
+                    deportes = []
+                    for item in sports_str.split(","):
+                        item = item.strip()
+                        if "(" in item and ")" in item:
+                            nombre, nivel = item.rsplit("(", 1)
+                            deportes.append({
+                                "sport": nombre.strip(),
+                                "level": nivel.replace(")", "").strip()
+                            })
+                        elif item:
+                            deportes.append({"sport": item, "level": "Principiante"})
+                    return deportes
+                
+                match_user = {
+                    "id": other_user.id,
+                    "name": other_user.username,
+                    "age": other_user.age or 25,
+                    "location": other_user.location or "Buenos Aires",
+                    "bio": other_user.descripcion or "Amante del deporte",
+                    "foto_url": other_user.foto_url or "",
+                    "video_url": other_user.video_url or "",
+                    "sports": parse_sports(other_user.deportes_preferidos or ""),
+                    "match_date": match.created_at.isoformat()
+                }
+                match_users.append(match_user)
+        
+        print(f"✅ Encontrados {len(match_users)} matches")
+        return {"matches": match_users}
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo matches: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Endpoint para obtener usuarios compatibles
 @app.get("/users/compatible")
@@ -398,11 +449,44 @@ async def like_user(
         if current_user.id == user_id:
             raise HTTPException(status_code=400, detail="No puedes darte like a ti mismo")
         
-        # Por ahora, simular un match con 30% de probabilidad
-        import random
-        is_match = random.random() < 0.3
+        # Verificar si ya existe un like
+        existing_like = db.query(models.Like).filter(
+            models.Like.user_id == current_user.id,
+            models.Like.liked_user_id == user_id
+        ).first()
         
-        print(f"🎯 Resultado del like: {'MATCH!' if is_match else 'No match'}")
+        if existing_like:
+            return {
+                "success": True,
+                "is_match": False,
+                "message": "Ya le diste like a este usuario"
+            }
+        
+        # Crear el like
+        new_like = models.Like(
+            user_id=current_user.id,
+            liked_user_id=user_id
+        )
+        db.add(new_like)
+        
+        # Verificar si hay match (like mutuo)
+        mutual_like = db.query(models.Like).filter(
+            models.Like.user_id == user_id,
+            models.Like.liked_user_id == current_user.id
+        ).first()
+        
+        is_match = False
+        if mutual_like:
+            # Crear el match
+            new_match = models.Match(
+                user1_id=min(current_user.id, user_id),
+                user2_id=max(current_user.id, user_id)
+            )
+            db.add(new_match)
+            is_match = True
+            print(f"🎉 ¡MATCH! Entre usuario {current_user.id} y usuario {user_id}")
+        
+        db.commit()
         
         return {
             "success": True,
@@ -414,6 +498,7 @@ async def like_user(
         raise
     except Exception as e:
         print(f"❌ Error procesando like: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 # Endpoint para dar dislike a un usuario
@@ -435,6 +520,17 @@ async def dislike_user(
         if current_user.id == user_id:
             raise HTTPException(status_code=400, detail="No puedes rechazarte a ti mismo")
         
+        # Eliminar like si existe
+        existing_like = db.query(models.Like).filter(
+            models.Like.user_id == current_user.id,
+            models.Like.liked_user_id == user_id
+        ).first()
+        
+        if existing_like:
+            db.delete(existing_like)
+        
+        db.commit()
+        
         print("✅ Dislike registrado")
         
         return {
@@ -446,6 +542,7 @@ async def dislike_user(
         raise
     except Exception as e:
         print(f"❌ Error procesando dislike: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 # Rutas de archivos
