@@ -14,6 +14,7 @@ import shutil
 from dotenv import load_dotenv
 import bcrypt
 from fastapi.security import OAuth2PasswordRequestForm
+from app.auth import pwd_context
 
 # Cargar variables de entorno
 load_dotenv()
@@ -445,36 +446,28 @@ BASE_URL = get_base_url()
 @app.post("/auth/register")
 async def register(user_data: schemas.UserCreate):
     try:
-        # Verificar si el usuario ya existe
         existing_user = db.query(models.User).filter(
             (models.User.email == user_data.email) | (models.User.username == user_data.username)
         ).first()
-        
         if existing_user:
             raise HTTPException(status_code=400, detail="Usuario o email ya existe")
-        
-        # Crear nuevo usuario con solo los campos que existen
-        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
-        
+        # Usar passlib para hashear la contraseña
+        hashed_password = pwd_context.hash(user_data.password)
         new_user = models.User(
             username=user_data.username,
             email=user_data.email,
-            password=hashed_password.decode('utf-8'),  # Solo usar el campo existente
+            password=hashed_password,
             age=user_data.age,
             location=user_data.location,
-            descripcion=user_data.bio or user_data.descripcion,  # Solo usar el campo existente
-            deportes_preferidos=user_data.sports or user_data.deportes_preferidos,  # Solo usar el campo existente
+            descripcion=user_data.bio or user_data.descripcion,
+            deportes_preferidos=user_data.sports or user_data.deportes_preferidos,
             foto_url=user_data.foto_url,
             video_url=user_data.video_url
         )
-        
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
-        # Generar token
         token = create_access_token(data={"sub": new_user.email})
-        
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -482,7 +475,7 @@ async def register(user_data: schemas.UserCreate):
                 "id": new_user.id,
                 "username": new_user.username,
                 "email": new_user.email,
-                "name": new_user.username,  # Usar username como name
+                "name": new_user.username,
                 "age": new_user.age,
                 "location": new_user.location,
                 "bio": new_user.descripcion or "",
@@ -499,16 +492,14 @@ async def register(user_data: schemas.UserCreate):
 @app.post("/auth/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
-        # Buscar usuario por email o username (el frontend siempre manda en el campo 'username')
         user = db.query(models.User).filter(
             (models.User.email == form_data.username) | (models.User.username == form_data.username)
         ).first()
         if not user:
             raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
-        # Verificar contraseña
-        if not bcrypt.checkpw(form_data.password.encode('utf-8'), user.password.encode('utf-8')):
+        # Usar passlib para verificar la contraseña
+        if not pwd_context.verify(form_data.password, user.password):
             raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
-        # Generar token
         token = create_access_token(data={"sub": user.email})
         return {
             "access_token": token,
@@ -553,13 +544,12 @@ async def test_register():
             return {"error": "Usuario ya existe"}
         
         # Crear nuevo usuario
-        hashed_password = bcrypt.hashpw(test_data["password"].encode('utf-8'), bcrypt.gensalt())
+        hashed_password = pwd_context.hash(test_data["password"])
         
         new_user = models.User(
             username=test_data["username"],
             email=test_data["email"],
-            password=hashed_password.decode('utf-8'),
-            hashed_password=hashed_password.decode('utf-8'),
+            password=hashed_password,
             name=test_data["name"],
             age=test_data["age"],
             location=test_data["location"],
