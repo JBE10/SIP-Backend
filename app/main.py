@@ -84,6 +84,22 @@ def test_database(db: Session = Depends(get_db)):
     except Exception as e:
         return {"status": "error", "message": f"Error en base de datos: {str(e)}"}
 
+# Endpoint para verificar variables de entorno
+@app.get("/test-env")
+def test_environment_variables():
+    return {
+        "status": "success",
+        "environment_variables": {
+            "BASE_URL": os.getenv("BASE_URL", "No definido"),
+            "DATABASE_URL": os.getenv("DATABASE_URL", "No definido")[:20] + "..." if os.getenv("DATABASE_URL") else "No definido",
+            "SECRET_KEY": "Definido" if os.getenv("SECRET_KEY") else "No definido",
+            "NODE_ENV": os.getenv("NODE_ENV", "No definido"),
+            "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "No definido"),
+            "RAILWAY_PROJECT_ID": os.getenv("RAILWAY_PROJECT_ID", "No definido"),
+        },
+        "current_base_url": os.getenv("BASE_URL", "http://localhost:8000")
+    }
+
 # Endpoint para verificar archivos en static
 @app.get("/test-static")
 def test_static_files():
