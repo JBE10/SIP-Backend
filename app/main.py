@@ -253,32 +253,25 @@ async def get_compatible_users_route(
     """
     Obtiene usuarios compatibles para el usuario actual
     """
-    from . import matching
-    
     try:
-        # Obtener el usuario actual de la base de datos
-        db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-        if not db_user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
-        # Obtener usuarios compatibles
-        compatible_users = matching.get_compatible_users(db, db_user)
+        # Obtener todos los usuarios excepto el actual
+        users = db.query(models.User).filter(models.User.id != current_user.id).all()
         
         # Convertir a formato de respuesta
         response = []
-        for item in compatible_users:
+        for user in users:
             user_data = {
-                "id": item["user"].id,
-                "username": item["user"].username,
-                "email": item["user"].email,
-                "age": item["user"].age,
-                "location": item["user"].location,
-                "descripcion": item["user"].descripcion or "",
-                "foto_url": item["user"].foto_url,
-                "video_url": item["user"].video_url,
-                "deportes_preferidos": item["user"].deportes_preferidos or "",
-                "compatibility_score": round(item["compatibility_score"], 1),
-                "common_sports": item["common_sports"]
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "age": user.age,
+                "location": user.location,
+                "descripcion": user.descripcion or "",
+                "foto_url": user.foto_url,
+                "video_url": user.video_url,
+                "deportes_preferidos": user.deportes_preferidos or "",
+                "compatibility_score": 50.0,  # Score por defecto
+                "common_sports": []
             }
             response.append(user_data)
         
