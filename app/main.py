@@ -246,11 +246,7 @@ def get_matches(
 
 # Nuevos endpoints para el sistema de matching
 @app.get("/users/compatible")
-def get_compatible_users(
-    limit: int = 20,
-    current_user: schemas.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
+async def get_compatible_users_route(current_user: schemas.User = Depends(auth.get_current_user)):
     """
     Obtiene usuarios compatibles para el usuario actual
     """
@@ -263,7 +259,7 @@ def get_compatible_users(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
         # Obtener usuarios compatibles
-        compatible_users = matching.get_compatible_users(db, db_user, limit)
+        compatible_users = matching.get_compatible_users(db, db_user)
         
         # Convertir a formato de respuesta
         response = []
@@ -271,13 +267,13 @@ def get_compatible_users(
             user_data = {
                 "id": item["user"].id,
                 "username": item["user"].username,
-                "name": item["user"].name or item["user"].username,
+                "email": item["user"].email,
                 "age": item["user"].age,
                 "location": item["user"].location,
-                "bio": item["user"].bio or item["user"].descripcion or "",
+                "descripcion": item["user"].descripcion or "",
                 "foto_url": item["user"].foto_url,
                 "video_url": item["user"].video_url,
-                "sports": item["user"].sports or item["user"].deportes_preferidos or "",
+                "deportes_preferidos": item["user"].deportes_preferidos or "",
                 "compatibility_score": round(item["compatibility_score"], 1),
                 "common_sports": item["common_sports"]
             }
