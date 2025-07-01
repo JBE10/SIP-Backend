@@ -67,9 +67,22 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "age": user.age,
+            "location": user.location,
+            "descripcion": user.descripcion or "",
+            "foto_url": user.foto_url,
+            "video_url": user.video_url,
+            "deportes_preferidos": user.deportes_preferidos or ""
+        }
+    }
 
 @router.post("/register")
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
