@@ -950,24 +950,50 @@ async def create_test_users(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint para crear tablas si no existen
-@app.post("/create-tables")
-async def create_tables(db: Session = Depends(get_db)):
+# Endpoint para crear tablas específicas
+@app.post("/create-likes-matches-tables")
+async def create_likes_matches_tables(db: Session = Depends(get_db)):
     try:
-        print("🔧 Creando tablas si no existen...")
+        print("🔧 Creando tablas likes y matches específicamente...")
         
-        # Importar los modelos para que SQLAlchemy los reconozca
-        from app.models import Like, Match
+        # Crear tabla likes
+        create_likes_table = """
+        CREATE TABLE IF NOT EXISTS likes (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            liked_user_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (liked_user_id) REFERENCES users(id)
+        );
+        """
         
-        # Crear las tablas
-        Base.metadata.create_all(bind=engine)
+        # Crear tabla matches
+        create_matches_table = """
+        CREATE TABLE IF NOT EXISTS matches (
+            id SERIAL PRIMARY KEY,
+            user1_id INTEGER NOT NULL,
+            user2_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user1_id) REFERENCES users(id),
+            FOREIGN KEY (user2_id) REFERENCES users(id)
+        );
+        """
         
-        print("✅ Tablas creadas exitosamente")
-        return {"message": "Tablas creadas exitosamente"}
+        # Ejecutar las consultas SQL
+        from sqlalchemy import text
+        
+        db.execute(text(create_likes_table))
+        db.execute(text(create_matches_table))
+        db.commit()
+        
+        print("✅ Tablas likes y matches creadas exitosamente")
+        return {"message": "Tablas likes y matches creadas exitosamente"}
         
     except Exception as e:
         print(f"❌ Error creando tablas: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        db.rollback()
+        return {"error": str(e)}
 
 # Endpoint para obtener estadísticas de la base de datos
 @app.get("/db-stats")
