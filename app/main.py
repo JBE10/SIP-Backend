@@ -736,6 +736,123 @@ async def test_register():
         db.rollback()
         return {"error": str(e)}
 
+# Endpoint para crear usuarios de prueba
+@app.post("/test/create-test-users")
+async def create_test_users(db: Session = Depends(get_db)):
+    try:
+        print("🧪 Creando usuarios de prueba...")
+        
+        # Lista de usuarios de prueba
+        test_users = [
+            {
+                "username": "maria_garcia",
+                "email": "maria@test.com",
+                "password": "test123",
+                "age": 24,
+                "location": "Palermo",
+                "descripcion": "Amante del running y el yoga. Busco compañeras para entrenar juntas.",
+                "deportes_preferidos": "Running (Intermedio), Yoga (Avanzado), Pilates (Principiante)",
+                "foto_url": "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400",
+                "video_url": ""
+            },
+            {
+                "username": "carlos_rodriguez",
+                "email": "carlos@test.com", 
+                "password": "test123",
+                "age": 28,
+                "location": "Belgrano",
+                "descripcion": "Jugador de fútbol amateur. Busco equipo para jugar los fines de semana.",
+                "deportes_preferidos": "Fútbol (Avanzado), Tenis (Intermedio), Natación (Principiante)",
+                "foto_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+                "video_url": ""
+            },
+            {
+                "username": "ana_lopez",
+                "email": "ana@test.com",
+                "password": "test123", 
+                "age": 26,
+                "location": "Recoleta",
+                "descripcion": "Instructora de pilates y amante del ciclismo urbano.",
+                "deportes_preferidos": "Pilates (Avanzado), Ciclismo (Intermedio), Yoga (Intermedio)",
+                "foto_url": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+                "video_url": ""
+            },
+            {
+                "username": "juan_martinez",
+                "email": "juan@test.com",
+                "password": "test123",
+                "age": 30,
+                "location": "Villa Crespo", 
+                "descripcion": "Entrenador personal especializado en funcional. Busco clientes y compañeros.",
+                "deportes_preferidos": "Funcional (Avanzado), Crossfit (Intermedio), Gimnasio (Avanzado)",
+                "foto_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                "video_url": ""
+            },
+            {
+                "username": "laura_fernandez",
+                "email": "laura@test.com",
+                "password": "test123",
+                "age": 22,
+                "location": "Caballito",
+                "descripcion": "Estudiante de deportes. Me gusta el básquet y el vóley.",
+                "deportes_preferidos": "Básquet (Intermedio), Vóley (Principiante), Running (Intermedio)",
+                "foto_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+                "video_url": ""
+            }
+        ]
+        
+        created_users = []
+        for user_data in test_users:
+            # Verificar si el usuario ya existe
+            existing_user = db.query(models.User).filter(
+                models.User.email == user_data["email"]
+            ).first()
+            
+            if existing_user:
+                print(f"⚠️ Usuario {user_data['username']} ya existe")
+                continue
+            
+            # Crear hash de la contraseña
+            hashed_password = pwd_context.hash(user_data["password"])
+            
+            # Crear el usuario
+            new_user = models.User(
+                username=user_data["username"],
+                email=user_data["email"],
+                hashed_password=hashed_password,
+                age=user_data["age"],
+                location=user_data["location"],
+                descripcion=user_data["descripcion"],
+                deportes_preferidos=user_data["deportes_preferidos"],
+                foto_url=user_data["foto_url"],
+                video_url=user_data["video_url"]
+            )
+            
+            db.add(new_user)
+            created_users.append(user_data["username"])
+        
+        db.commit()
+        
+        print(f"✅ Usuarios de prueba creados: {created_users}")
+        
+        return {
+            "success": True,
+            "message": f"Usuarios de prueba creados: {', '.join(created_users)}",
+            "created_users": created_users,
+            "test_accounts": [
+                {"email": "maria@test.com", "password": "test123"},
+                {"email": "carlos@test.com", "password": "test123"},
+                {"email": "ana@test.com", "password": "test123"},
+                {"email": "juan@test.com", "password": "test123"},
+                {"email": "laura@test.com", "password": "test123"}
+            ]
+        }
+        
+    except Exception as e:
+        print(f"❌ Error creando usuarios de prueba: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Forzar reinicio de Railway - 2025-07-01
 
 if __name__ == "__main__":
