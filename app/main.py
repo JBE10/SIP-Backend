@@ -98,7 +98,6 @@ def test_static_files():
             if os.path.isfile(file_path):
                 file_size = os.path.getsize(file_path)
                 # Configuración dinámica de URL basada en el entorno
-                import os
                 base_url = os.getenv("BASE_URL", "http://localhost:8000")
                 
                 files.append({
@@ -177,7 +176,6 @@ async def test_upload(file: UploadFile = File(...)):
             print(f"✅ Test file guardado: {actual_size} bytes")
             
             # Configuración dinámica de URL basada en el entorno
-            import os
             base_url = os.getenv("BASE_URL", "http://localhost:8000")
             
             test_url = f"{base_url}/static/{unique_filename}"
@@ -274,7 +272,6 @@ async def upload_profile_picture(
             raise HTTPException(status_code=500, detail="Error al guardar el archivo")
         
         # Configuración dinámica de URL basada en el entorno
-        import os
         base_url = os.getenv("BASE_URL", "http://localhost:8000")
         
         # Actualizar la URL de la foto en la base de datos
@@ -338,7 +335,6 @@ async def upload_sport_video(
             raise HTTPException(status_code=500, detail="Error al guardar el archivo")
         
         # Configuración dinámica de URL basada en el entorno
-        import os
         base_url = os.getenv("BASE_URL", "http://localhost:8000")
         
         # Actualizar la URL del video en la base de datos
