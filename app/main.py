@@ -97,7 +97,7 @@ def test_environment_variables():
             "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "No definido"),
             "RAILWAY_PROJECT_ID": os.getenv("RAILWAY_PROJECT_ID", "No definido"),
         },
-        "current_base_url": os.getenv("BASE_URL", "http://localhost:8000")
+        "current_base_url": BASE_URL
     }
 
 # Endpoint para verificar archivos en static
@@ -114,7 +114,7 @@ def test_static_files():
             if os.path.isfile(file_path):
                 file_size = os.path.getsize(file_path)
                 # Configuración dinámica de URL basada en el entorno
-                base_url = os.getenv("BASE_URL", "http://localhost:8000")
+                base_url = BASE_URL
                 
                 files.append({
                     "name": filename,
@@ -192,7 +192,7 @@ async def test_upload(file: UploadFile = File(...)):
             print(f"✅ Test file guardado: {actual_size} bytes")
             
             # Configuración dinámica de URL basada en el entorno
-            base_url = os.getenv("BASE_URL", "http://localhost:8000")
+            base_url = BASE_URL
             
             test_url = f"{base_url}/static/{unique_filename}"
             return {
@@ -288,7 +288,7 @@ async def upload_profile_picture(
             raise HTTPException(status_code=500, detail="Error al guardar el archivo")
         
         # Configuración dinámica de URL basada en el entorno
-        base_url = os.getenv("BASE_URL", "http://localhost:8000")
+        base_url = BASE_URL
         
         # Actualizar la URL de la foto en la base de datos
         foto_url = f"{base_url}/static/{unique_filename}"
@@ -351,7 +351,7 @@ async def upload_sport_video(
             raise HTTPException(status_code=500, detail="Error al guardar el archivo")
         
         # Configuración dinámica de URL basada en el entorno
-        base_url = os.getenv("BASE_URL", "http://localhost:8000")
+        base_url = BASE_URL
         
         # Actualizar la URL del video en la base de datos
         video_url = f"{base_url}/static/{unique_filename}"
@@ -372,6 +372,27 @@ async def upload_sport_video(
 # Asegúrate de que la carpeta exista
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Configuración dinámica de URL basada en el entorno
+def get_base_url():
+    # Si BASE_URL está configurada, usarla
+    base_url = os.getenv("BASE_URL")
+    if base_url:
+        return base_url
+    
+    # Si estamos en Railway, usar la URL de Railway
+    railway_environment = os.getenv("RAILWAY_ENVIRONMENT")
+    railway_project_id = os.getenv("RAILWAY_PROJECT_ID")
+    
+    if railway_environment and railway_project_id:
+        # Intentar construir la URL de Railway
+        return f"https://web-production-07ed64.up.railway.app"
+    
+    # Por defecto, usar localhost
+    return "http://localhost:8000"
+
+# Función para obtener la URL base
+BASE_URL = get_base_url()
 
 if __name__ == "__main__":
     import uvicorn
