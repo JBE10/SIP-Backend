@@ -608,24 +608,19 @@ async def register(user_data: schemas.UserCreate):
         if existing_user:
             raise HTTPException(status_code=400, detail="Usuario o email ya existe")
         
-        # Crear nuevo usuario
+        # Crear nuevo usuario con solo los campos que existen
         hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
         
         new_user = models.User(
             username=user_data.username,
             email=user_data.email,
-            password=hashed_password.decode('utf-8'),  # Usar password (campo existente)
-            hashed_password=hashed_password.decode('utf-8'),  # También guardar en nuevo campo
-            name=user_data.name,
+            password=hashed_password.decode('utf-8'),  # Solo usar el campo existente
             age=user_data.age,
             location=user_data.location,
-            bio=user_data.bio,
-            descripcion=user_data.descripcion or user_data.bio,  # Usar descripcion si existe, sino bio
-            sports=user_data.sports,
-            deportes_preferidos=user_data.deportes_preferidos or user_data.sports,  # Usar deportes_preferidos si existe, sino sports
+            descripcion=user_data.bio or user_data.descripcion,  # Solo usar el campo existente
+            deportes_preferidos=user_data.sports or user_data.deportes_preferidos,  # Solo usar el campo existente
             foto_url=user_data.foto_url,
-            video_url=user_data.video_url,
-            is_active=True
+            video_url=user_data.video_url
         )
         
         db.add(new_user)
@@ -642,13 +637,13 @@ async def register(user_data: schemas.UserCreate):
                 "id": new_user.id,
                 "username": new_user.username,
                 "email": new_user.email,
-                "name": new_user.name or new_user.username,
+                "name": new_user.username,  # Usar username como name
                 "age": new_user.age,
                 "location": new_user.location,
-                "bio": new_user.bio or new_user.descripcion or "",
+                "bio": new_user.descripcion or "",
                 "foto_url": new_user.foto_url,
                 "video_url": new_user.video_url,
-                "sports": new_user.sports or new_user.deportes_preferidos or ""
+                "sports": new_user.deportes_preferidos or ""
             }
         }
     except Exception as e:
@@ -667,9 +662,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         if not user:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
         
-        # Verificar contraseña (usar password o hashed_password)
-        password_to_check = user.hashed_password if user.hashed_password else user.password
-        if not bcrypt.checkpw(form_data.password.encode('utf-8'), password_to_check.encode('utf-8')):
+        # Verificar contraseña (solo usar el campo password)
+        if not bcrypt.checkpw(form_data.password.encode('utf-8'), user.password.encode('utf-8')):
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
         
         # Generar token
@@ -682,13 +676,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
-                "name": user.name or user.username,
+                "name": user.username,  # Usar username como name
                 "age": user.age,
                 "location": user.location,
-                "bio": user.bio or user.descripcion or "",
+                "bio": user.descripcion or "",
                 "foto_url": user.foto_url,
                 "video_url": user.video_url,
-                "sports": user.sports or user.deportes_preferidos or ""
+                "sports": user.deportes_preferidos or ""
             }
         }
     except Exception as e:
