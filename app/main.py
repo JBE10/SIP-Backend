@@ -620,9 +620,11 @@ async def register(user_data: schemas.UserCreate):
             age=user_data.age,
             location=user_data.location,
             bio=user_data.bio,
-            descripcion=user_data.bio,  # También guardar en campo existente
+            descripcion=user_data.descripcion or user_data.bio,  # Usar descripcion si existe, sino bio
             sports=user_data.sports,
-            deportes_preferidos=user_data.sports,  # También guardar en campo existente
+            deportes_preferidos=user_data.deportes_preferidos or user_data.sports,  # Usar deportes_preferidos si existe, sino sports
+            foto_url=user_data.foto_url,
+            video_url=user_data.video_url,
             is_active=True
         )
         
