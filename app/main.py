@@ -695,6 +695,61 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         print(f"Error en login: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+@app.get("/test-register")
+async def test_register():
+    try:
+        # Simular datos de registro
+        test_data = {
+            "username": "testuser3",
+            "email": "test3@test.com",
+            "password": "test123",
+            "name": "Test User 3",
+            "age": 25,
+            "location": "Palermo",
+            "bio": "Test bio",
+            "sports": "Fútbol,Tenis"
+        }
+        
+        # Verificar si el usuario ya existe
+        existing_user = db.query(models.User).filter(
+            (models.User.email == test_data["email"]) | (models.User.username == test_data["username"])
+        ).first()
+        
+        if existing_user:
+            return {"error": "Usuario ya existe"}
+        
+        # Crear nuevo usuario
+        hashed_password = bcrypt.hashpw(test_data["password"].encode('utf-8'), bcrypt.gensalt())
+        
+        new_user = models.User(
+            username=test_data["username"],
+            email=test_data["email"],
+            password=hashed_password.decode('utf-8'),
+            hashed_password=hashed_password.decode('utf-8'),
+            name=test_data["name"],
+            age=test_data["age"],
+            location=test_data["location"],
+            bio=test_data["bio"],
+            descripcion=test_data["bio"],
+            sports=test_data["sports"],
+            deportes_preferidos=test_data["sports"],
+            is_active=True
+        )
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        return {
+            "success": True,
+            "user_id": new_user.id,
+            "message": "Usuario creado exitosamente"
+        }
+    except Exception as e:
+        print(f"Error en test-register: {e}")
+        db.rollback()
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
