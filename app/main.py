@@ -650,21 +650,17 @@ async def register(user_data: schemas.UserCreate):
 @app.post("/auth/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
-        # Buscar usuario por email o username
+        # Buscar usuario por email o username (el frontend siempre manda en el campo 'username')
         user = db.query(models.User).filter(
             (models.User.email == form_data.username) | (models.User.username == form_data.username)
         ).first()
-        
         if not user:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-        
-        # Verificar contraseña (solo usar el campo password)
+            raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
+        # Verificar contraseña
         if not bcrypt.checkpw(form_data.password.encode('utf-8'), user.password.encode('utf-8')):
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-        
+            raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
         # Generar token
         token = create_access_token(data={"sub": user.email})
-        
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -672,13 +668,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
-                "name": user.username,  # Usar username como name
                 "age": user.age,
                 "location": user.location,
-                "bio": user.descripcion or "",
+                "descripcion": user.descripcion or "",
                 "foto_url": user.foto_url,
                 "video_url": user.video_url,
-                "sports": user.deportes_preferidos or ""
+                "deportes_preferidos": user.deportes_preferidos or ""
             }
         }
     except Exception as e:
