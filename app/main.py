@@ -215,6 +215,25 @@ async def test_upload(file: UploadFile = File(...)):
 # Rutas de usuarios
 @app.get("/users/me")
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
+    # Función para parsear deportes
+    def parse_sports(sports_str):
+        if not sports_str:
+            return []
+        deportes = []
+        for item in sports_str.split(","):
+            item = item.strip()
+            if "(" in item and ")" in item:
+                # Formato: "Fútbol (Avanzado)"
+                nombre, nivel = item.rsplit("(", 1)
+                deportes.append({
+                    "sport": nombre.strip(),
+                    "level": nivel.replace(")", "").strip()
+                })
+            elif item:
+                # Formato simple: "Fútbol"
+                deportes.append({"sport": item, "level": "Principiante"})
+        return deportes
+    
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -224,7 +243,8 @@ def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
         "descripcion": current_user.descripcion or "",
         "foto_url": current_user.foto_url,
         "video_url": current_user.video_url,
-        "deportes_preferidos": current_user.deportes_preferidos or ""
+        "deportes_preferidos": current_user.deportes_preferidos or "",
+        "sports": parse_sports(current_user.deportes_preferidos or "")  # Formato array para el frontend
     }
 
 @app.put("/users/me", response_model=schemas.User)
@@ -264,6 +284,25 @@ async def get_compatible_users_route(
     try:
         print(f"🔍 Buscando usuarios compatibles para: {current_user.username}")
         
+        # Función para parsear deportes
+        def parse_sports(sports_str):
+            if not sports_str:
+                return []
+            deportes = []
+            for item in sports_str.split(","):
+                item = item.strip()
+                if "(" in item and ")" in item:
+                    # Formato: "Fútbol (Avanzado)"
+                    nombre, nivel = item.rsplit("(", 1)
+                    deportes.append({
+                        "sport": nombre.strip(),
+                        "level": nivel.replace(")", "").strip()
+                    })
+                elif item:
+                    # Formato simple: "Fútbol"
+                    deportes.append({"sport": item, "level": "Principiante"})
+            return deportes
+        
         # Obtener todos los usuarios excepto el actual
         users = db.query(models.User).filter(models.User.id != current_user.id).all()
         
@@ -276,6 +315,9 @@ async def get_compatible_users_route(
             # Deportes comunes (simulado)
             common_sports = ["Fútbol", "Tenis"] if random.random() > 0.5 else ["Running"]
             
+            # Parsear deportes del usuario
+            user_sports = parse_sports(user.deportes_preferidos or "")
+            
             compatible_user = {
                 "id": user.id,
                 "name": user.username,
@@ -284,7 +326,7 @@ async def get_compatible_users_route(
                 "bio": user.descripcion or "Amante del deporte",
                 "foto_url": user.foto_url or "",
                 "video_url": user.video_url or "",
-                "sports": user.deportes_preferidos or "",
+                "sports": user_sports,  # Ahora es un array de objetos
                 "compatibility_score": compatibility_score,
                 "common_sports": common_sports
             }
