@@ -9,24 +9,31 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    name = Column(String)
-    age = Column(Integer)
-    location = Column(String)
-    bio = Column(Text)
-    foto_url = Column(String)
-    video_url = Column(String)
-    sports = Column(String)  # JSON string de deportes
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)  # Mantener para compatibilidad
     
-    # Relaciones
-    likes_given = relationship("Like", foreign_keys="Like.liker_id", back_populates="liker")
-    likes_received = relationship("Like", foreign_keys="Like.liked_id", back_populates="liked")
-    matches = relationship("Match", foreign_keys="Match.user1_id", back_populates="user1")
-    matches_received = relationship("Match", foreign_keys="Match.user2_id", back_populates="user2")
+    # Campos existentes en producción
+    deportes_preferidos = Column(String(255))  # Mantener para compatibilidad
+    descripcion = Column(Text)  # Mantener para compatibilidad
+    foto_url = Column(String(255))
+    video_url = Column(String(255))
+    age = Column(Integer)
+    location = Column(String(100))
+    
+    # Nuevos campos (opcionales para compatibilidad)
+    hashed_password = Column(String, nullable=True)  # Nuevo campo
+    name = Column(String, nullable=True)  # Nuevo campo
+    bio = Column(Text, nullable=True)  # Nuevo campo (alias de descripcion)
+    sports = Column(String, nullable=True)  # Nuevo campo (alias de deportes_preferidos)
+    is_active = Column(Boolean, default=True, nullable=True)  # Nuevo campo
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=True)  # Nuevo campo
+    
+    # Relaciones (solo si las tablas existen)
+    likes_given = relationship("Like", foreign_keys="Like.liker_id", back_populates="liker", cascade="all, delete-orphan")
+    likes_received = relationship("Like", foreign_keys="Like.liked_id", back_populates="liked", cascade="all, delete-orphan")
+    matches = relationship("Match", foreign_keys="Match.user1_id", back_populates="user1", cascade="all, delete-orphan")
+    matches_received = relationship("Match", foreign_keys="Match.user2_id", back_populates="user2", cascade="all, delete-orphan")
 
 class Like(Base):
     __tablename__ = "likes"

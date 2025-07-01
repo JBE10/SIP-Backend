@@ -12,6 +12,8 @@ import os
 import uuid
 import shutil
 from dotenv import load_dotenv
+import bcrypt
+from fastapi.security import OAuth2PasswordRequestForm
 
 # Cargar variables de entorno
 load_dotenv()
@@ -269,13 +271,13 @@ def get_compatible_users(
             user_data = {
                 "id": item["user"].id,
                 "username": item["user"].username,
-                "name": item["user"].name,
+                "name": item["user"].name or item["user"].username,
                 "age": item["user"].age,
                 "location": item["user"].location,
-                "bio": item["user"].bio,
+                "bio": item["user"].bio or item["user"].descripcion or "",
                 "foto_url": item["user"].foto_url,
                 "video_url": item["user"].video_url,
-                "sports": item["user"].sports,
+                "sports": item["user"].sports or item["user"].deportes_preferidos or "",
                 "compatibility_score": round(item["compatibility_score"], 1),
                 "common_sports": item["common_sports"]
             }
@@ -594,6 +596,102 @@ def get_base_url():
 
 # Función para obtener la URL base
 BASE_URL = get_base_url()
+
+@app.post("/auth/register")
+async def register(user_data: schemas.UserCreate):
+    try:
+        # Verificar si el usuario ya existe
+        existing_user = db.query(models.User).filter(
+            (models.User.email == user_data.email) | (models.User.username == user_data.username)
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Usuario o email ya existe")
+        
+        # Crear nuevo usuario
+        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt())
+        
+        new_user = models.User(
+            username=user_data.username,
+            email=user_data.email,
+            password=hashed_password.decode('utf-8'),  # Usar password (campo existente)
+            hashed_password=hashed_password.decode('utf-8'),  # También guardar en nuevo campo
+            name=user_data.name,
+            age=user_data.age,
+            location=user_data.location,
+            bio=user_data.bio,
+            descripcion=user_data.bio,  # También guardar en campo existente
+            sports=user_data.sports,
+            deportes_preferidos=user_data.sports,  # También guardar en campo existente
+            is_active=True
+        )
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        # Generar token
+        token = create_access_token(data={"sub": new_user.email})
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email,
+                "name": new_user.name or new_user.username,
+                "age": new_user.age,
+                "location": new_user.location,
+                "bio": new_user.bio or new_user.descripcion or "",
+                "foto_url": new_user.foto_url,
+                "video_url": new_user.video_url,
+                "sports": new_user.sports or new_user.deportes_preferidos or ""
+            }
+        }
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+@app.post("/auth/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    try:
+        # Buscar usuario por email o username
+        user = db.query(models.User).filter(
+            (models.User.email == form_data.username) | (models.User.username == form_data.username)
+        ).first()
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        
+        # Verificar contraseña (usar password o hashed_password)
+        password_to_check = user.hashed_password if user.hashed_password else user.password
+        if not bcrypt.checkpw(form_data.password.encode('utf-8'), password_to_check.encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        
+        # Generar token
+        token = create_access_token(data={"sub": user.email})
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "name": user.name or user.username,
+                "age": user.age,
+                "location": user.location,
+                "bio": user.bio or user.descripcion or "",
+                "foto_url": user.foto_url,
+                "video_url": user.video_url,
+                "sports": user.sports or user.deportes_preferidos or ""
+            }
+        }
+    except Exception as e:
+        print(f"Error en login: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 if __name__ == "__main__":
     import uvicorn
