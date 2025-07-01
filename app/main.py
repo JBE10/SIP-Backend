@@ -246,7 +246,10 @@ def get_matches(
 
 # Nuevos endpoints para el sistema de matching
 @app.get("/users/compatible")
-async def get_compatible_users_route(current_user: schemas.User = Depends(auth.get_current_user)):
+async def get_compatible_users_route(
+    current_user: schemas.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Obtiene usuarios compatibles para el usuario actual
     """
@@ -287,153 +290,6 @@ async def get_compatible_users_route(current_user: schemas.User = Depends(auth.g
         
     except Exception as e:
         print(f"❌ Error obteniendo usuarios compatibles: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-
-@app.post("/users/like/{user_id}")
-def like_user(
-    user_id: int,
-    current_user: schemas.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Da like a un usuario y verifica si hay match
-    """
-    from . import matching
-    
-    try:
-        # Verificar que el usuario existe
-        target_user = db.query(models.User).filter(models.User.id == user_id).first()
-        if not target_user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
-        # Verificar que no se está dando like a sí mismo
-        if current_user.id == user_id:
-            raise HTTPException(status_code=400, detail="No puedes darte like a ti mismo")
-        
-        # Verificar que no se le dio like antes
-        existing_like = db.query(models.Like).filter(
-            models.Like.liker_id == current_user.id,
-            models.Like.liked_id == user_id
-        ).first()
-        
-        if existing_like:
-            raise HTTPException(status_code=400, detail="Ya le diste like a este usuario")
-        
-        # Crear el like
-        like = matching.create_like(db, current_user.id, user_id)
-        
-        # Verificar si hay match
-        match = db.query(models.Match).filter(
-            (models.Match.user1_id == current_user.id) & (models.Match.user2_id == user_id)
-        ).first()
-        
-        if not match:
-            match = db.query(models.Match).filter(
-                (models.Match.user1_id == user_id) & (models.Match.user2_id == current_user.id)
-            ).first()
-        
-        return {
-            "status": "success",
-            "message": "Like registrado exitosamente",
-            "is_match": match is not None,
-            "match_id": match.id if match else None
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error dando like: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-
-@app.post("/users/dislike/{user_id}")
-def dislike_user(
-    user_id: int,
-    current_user: schemas.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Registra un dislike (no mostrar más este usuario)
-    """
-    try:
-        # Verificar que el usuario existe
-        target_user = db.query(models.User).filter(models.User.id == user_id).first()
-        if not target_user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
-        # Verificar que no se está rechazando a sí mismo
-        if current_user.id == user_id:
-            raise HTTPException(status_code=400, detail="No puedes rechazarte a ti mismo")
-        
-        # Verificar que no se le dio dislike antes
-        existing_like = db.query(models.Like).filter(
-            models.Like.liker_id == current_user.id,
-            models.Like.liked_id == user_id
-        ).first()
-        
-        if existing_like:
-            raise HTTPException(status_code=400, detail="Ya interactuaste con este usuario")
-        
-        # Crear el dislike (se registra como like pero se usa para filtrar)
-        like = models.Like(liker_id=current_user.id, liked_id=user_id)
-        db.add(like)
-        db.commit()
-        
-        return {
-            "status": "success",
-            "message": "Usuario rechazado"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Error rechazando usuario: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-
-@app.get("/matches/list")
-def get_user_matches(
-    current_user: schemas.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Obtiene todos los matches del usuario actual
-    """
-    from . import matching
-    
-    try:
-        matches = matching.get_user_matches(db, current_user.id)
-        
-        response = []
-        for match in matches:
-            # Determinar quién es el otro usuario
-            other_user_id = match.user2_id if match.user1_id == current_user.id else match.user1_id
-            other_user = db.query(models.User).filter(models.User.id == other_user_id).first()
-            
-            if other_user:
-                match_data = {
-                    "id": match.id,
-                    "created_at": match.created_at,
-                    "other_user": {
-                        "id": other_user.id,
-                        "username": other_user.username,
-                        "name": other_user.name,
-                        "age": other_user.age,
-                        "location": other_user.location,
-                        "bio": other_user.bio,
-                        "foto_url": other_user.foto_url,
-                        "video_url": other_user.video_url,
-                        "sports": other_user.sports
-                    }
-                }
-                response.append(match_data)
-        
-        return {
-            "status": "success",
-            "matches": response,
-            "total": len(response)
-        }
-        
-    except Exception as e:
-        print(f"❌ Error obteniendo matches: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 # Rutas de archivos
