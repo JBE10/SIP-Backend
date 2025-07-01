@@ -279,10 +279,17 @@ def get_matches(
 @app.get("/users/compatible")
 async def get_compatible_users_route(
     current_user: schemas.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # Parámetros de filtros
+    min_age: int = 18,
+    max_age: int = 65,
+    location: str = None,
+    sports: str = None,
+    distance: int = 50
 ):
     try:
         print(f"🔍 Buscando usuarios compatibles para: {current_user.username}")
+        print(f"📊 Filtros aplicados: edad {min_age}-{max_age}, ubicación: {location}, deportes: {sports}")
         
         # Función para parsear deportes
         def parse_sports(sports_str):
@@ -306,33 +313,66 @@ async def get_compatible_users_route(
         # Obtener todos los usuarios excepto el actual
         users = db.query(models.User).filter(models.User.id != current_user.id).all()
         
+        # Parsear deportes filtrados
+        filtered_sports = []
+        if sports:
+            filtered_sports = parse_sports(sports)
+        
         compatible_users = []
         for user in users:
-            # Calcular score de compatibilidad básico (por ahora es aleatorio)
-            import random
-            compatibility_score = random.randint(60, 95)
+            # Aplicar filtro de edad
+            user_age = user.age or 25
+            if user_age < min_age or user_age > max_age:
+                continue
             
-            # Deportes comunes (simulado)
-            common_sports = ["Fútbol", "Tenis"] if random.random() > 0.5 else ["Running"]
+            # Aplicar filtro de ubicación
+            if location and user.location and user.location.lower() != location.lower():
+                continue
             
-            # Parsear deportes del usuario
+            # Aplicar filtro de deportes
             user_sports = parse_sports(user.deportes_preferidos or "")
+            if filtered_sports:
+                # Verificar si el usuario tiene al menos uno de los deportes filtrados
+                user_sport_names = [s.get("sport", "").lower() for s in user_sports]
+                filtered_sport_names = [s.get("sport", "").lower() for s in filtered_sports]
+                
+                has_matching_sport = any(
+                    user_sport in filtered_sport_names or user_sport in [fs.lower() for fs in filtered_sport_names]
+                    for user_sport in user_sport_names
+                )
+                
+                if not has_matching_sport:
+                    continue
+            
+            # Calcular score de compatibilidad basado en deportes en común
+            compatibility_score = 60  # Score base
+            common_sports = []
+            
+            if filtered_sports and user_sports:
+                for user_sport in user_sports:
+                    for filtered_sport in filtered_sports:
+                        if user_sport.get("sport", "").lower() == filtered_sport.get("sport", "").lower():
+                            common_sports.append(user_sport.get("sport"))
+                            compatibility_score += 10  # +10 por deporte en común
+            
+            # Asegurar que el score no exceda 95
+            compatibility_score = min(compatibility_score, 95)
             
             compatible_user = {
                 "id": user.id,
                 "name": user.username,
-                "age": user.age or 25,
+                "age": user_age,
                 "location": user.location or "Buenos Aires",
                 "bio": user.descripcion or "Amante del deporte",
                 "foto_url": user.foto_url or "",
                 "video_url": user.video_url or "",
-                "sports": user_sports,  # Ahora es un array de objetos
+                "sports": user_sports,  # Array de objetos
                 "compatibility_score": compatibility_score,
                 "common_sports": common_sports
             }
             compatible_users.append(compatible_user)
         
-        print(f"✅ Encontrados {len(compatible_users)} usuarios compatibles")
+        print(f"✅ Encontrados {len(compatible_users)} usuarios compatibles después de aplicar filtros")
         return {"users": compatible_users}
         
     except Exception as e:
