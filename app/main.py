@@ -255,46 +255,116 @@ def get_matches(
     # Por ahora, devolvemos una lista vacía
     return []
 
-# Nuevos endpoints para el sistema de matching
+# Endpoint para obtener usuarios compatibles
 @app.get("/users/compatible")
 async def get_compatible_users_route(
     current_user: schemas.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Obtiene usuarios compatibles para el usuario actual
-    """
     try:
+        print(f"🔍 Buscando usuarios compatibles para: {current_user.username}")
+        
         # Obtener todos los usuarios excepto el actual
         users = db.query(models.User).filter(models.User.id != current_user.id).all()
         
-        # Convertir a formato de respuesta
-        response = []
+        compatible_users = []
         for user in users:
-            user_data = {
+            # Calcular score de compatibilidad básico (por ahora es aleatorio)
+            import random
+            compatibility_score = random.randint(60, 95)
+            
+            # Deportes comunes (simulado)
+            common_sports = ["Fútbol", "Tenis"] if random.random() > 0.5 else ["Running"]
+            
+            compatible_user = {
                 "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "age": user.age,
-                "location": user.location,
-                "descripcion": user.descripcion or "",
-                "foto_url": user.foto_url,
-                "video_url": user.video_url,
-                "deportes_preferidos": user.deportes_preferidos or "",
-                "compatibility_score": 50.0,  # Score por defecto
-                "common_sports": []
+                "name": user.username,
+                "age": user.age or 25,
+                "location": user.location or "Buenos Aires",
+                "bio": user.descripcion or "Amante del deporte",
+                "foto_url": user.foto_url or "",
+                "video_url": user.video_url or "",
+                "sports": user.deportes_preferidos or "",
+                "compatibility_score": compatibility_score,
+                "common_sports": common_sports
             }
-            response.append(user_data)
+            compatible_users.append(compatible_user)
         
-        return {
-            "status": "success",
-            "users": response,
-            "total": len(response)
-        }
+        print(f"✅ Encontrados {len(compatible_users)} usuarios compatibles")
+        return {"users": compatible_users}
         
     except Exception as e:
-        print(f"❌ Error obteniendo usuarios compatibles: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        print(f"❌ Error obteniendo usuarios compatibles: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para dar like a un usuario
+@app.post("/users/like/{user_id}")
+async def like_user(
+    user_id: int,
+    current_user: schemas.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        print(f"❤️ Usuario {current_user.id} dando like a usuario {user_id}")
+        
+        # Verificar que el usuario objetivo existe
+        target_user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Verificar que no se está dando like a sí mismo
+        if current_user.id == user_id:
+            raise HTTPException(status_code=400, detail="No puedes darte like a ti mismo")
+        
+        # Por ahora, simular un match con 30% de probabilidad
+        import random
+        is_match = random.random() < 0.3
+        
+        print(f"🎯 Resultado del like: {'MATCH!' if is_match else 'No match'}")
+        
+        return {
+            "success": True,
+            "is_match": is_match,
+            "message": "¡Es un match! 🎉" if is_match else "Like registrado"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error procesando like: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para dar dislike a un usuario
+@app.post("/users/dislike/{user_id}")
+async def dislike_user(
+    user_id: int,
+    current_user: schemas.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        print(f"❌ Usuario {current_user.id} dando dislike a usuario {user_id}")
+        
+        # Verificar que el usuario objetivo existe
+        target_user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Verificar que no se está dando dislike a sí mismo
+        if current_user.id == user_id:
+            raise HTTPException(status_code=400, detail="No puedes rechazarte a ti mismo")
+        
+        print("✅ Dislike registrado")
+        
+        return {
+            "success": True,
+            "message": "Dislike registrado"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error procesando dislike: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Rutas de archivos
 @app.post("/upload-profile-picture")
