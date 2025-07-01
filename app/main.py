@@ -235,13 +235,22 @@ async def upload_profile_picture(
     current_user: schemas.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    print(f"📸 Iniciando subida de foto: {file.filename}")
+    print(f"📊 Tipo de archivo: {file.content_type}")
+    print(f"👤 Usuario: {current_user.username}")
+    
     # Verificar que sea una imagen
     if not file.content_type.startswith("image/"):
+        print(f"❌ Tipo de archivo no válido: {file.content_type}")
         raise HTTPException(status_code=400, detail="Solo se permiten archivos de imagen")
     
     # Verificar tamaño (5MB máximo)
     content = await file.read()
-    if len(content) > 5 * 1024 * 1024:
+    file_size = len(content)
+    print(f"📏 Tamaño del archivo: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+    
+    if file_size > 5 * 1024 * 1024:
+        print(f"❌ Archivo demasiado grande: {file_size / (1024*1024):.2f} MB")
         raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 5MB")
     
     # Generar nombre único para el archivo
@@ -249,22 +258,40 @@ async def upload_profile_picture(
     unique_filename = f"{uuid.uuid4()}.{file_extension}"
     file_path = f"static/{unique_filename}"
     
-    # Guardar el archivo
-    with open(file_path, "wb") as buffer:
-        buffer.write(content)
+    print(f"💾 Guardando archivo en: {file_path}")
     
-    # Configuración dinámica de URL basada en el entorno
-    import os
-    base_url = os.getenv("BASE_URL", "http://localhost:8000")
-    
-    # Actualizar la URL de la foto en la base de datos
-    foto_url = f"{base_url}/static/{unique_filename}"
-    db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-    db_user.foto_url = foto_url
-    db.commit()
-    db.refresh(db_user)
-    
-    return {"message": "Foto subida exitosamente", "foto_url": foto_url}
+    try:
+        # Guardar el archivo
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+        
+        # Verificar que el archivo se guardó
+        if os.path.exists(file_path):
+            actual_size = os.path.getsize(file_path)
+            print(f"✅ Archivo guardado exitosamente. Tamaño: {actual_size} bytes")
+        else:
+            print(f"❌ Error: El archivo no se guardó en {file_path}")
+            raise HTTPException(status_code=500, detail="Error al guardar el archivo")
+        
+        # Configuración dinámica de URL basada en el entorno
+        import os
+        base_url = os.getenv("BASE_URL", "http://localhost:8000")
+        
+        # Actualizar la URL de la foto en la base de datos
+        foto_url = f"{base_url}/static/{unique_filename}"
+        print(f"🔗 URL de la foto: {foto_url}")
+        
+        db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+        db_user.foto_url = foto_url
+        db.commit()
+        db.refresh(db_user)
+        
+        print(f"✅ Foto subida exitosamente para usuario {current_user.username}")
+        return {"message": "Foto subida exitosamente", "foto_url": foto_url}
+        
+    except Exception as e:
+        print(f"❌ Error al procesar foto: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @app.post("/upload-sport-video")
 async def upload_sport_video(
