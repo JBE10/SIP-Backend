@@ -950,6 +950,50 @@ async def create_test_users(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+# Endpoint para crear tablas si no existen
+@app.post("/create-tables")
+async def create_tables(db: Session = Depends(get_db)):
+    try:
+        print("🔧 Creando tablas si no existen...")
+        
+        # Importar los modelos para que SQLAlchemy los reconozca
+        from app.models import Like, Match
+        
+        # Crear las tablas
+        Base.metadata.create_all(bind=engine)
+        
+        print("✅ Tablas creadas exitosamente")
+        return {"message": "Tablas creadas exitosamente"}
+        
+    except Exception as e:
+        print(f"❌ Error creando tablas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para obtener estadísticas de la base de datos
+@app.get("/db-stats")
+async def get_db_stats(db: Session = Depends(get_db)):
+    try:
+        from app.models import User, Like, Match
+        
+        user_count = db.query(User).count()
+        like_count = db.query(Like).count()
+        match_count = db.query(Match).count()
+        
+        return {
+            "users": user_count,
+            "likes": like_count,
+            "matches": match_count
+        }
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo estadísticas: {e}")
+        return {
+            "users": 0,
+            "likes": 0,
+            "matches": 0,
+            "error": str(e)
+        }
+
 # Forzar reinicio de Railway - 2025-07-01
 
 if __name__ == "__main__":
