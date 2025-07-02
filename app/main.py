@@ -1020,6 +1020,81 @@ async def get_db_stats(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
+# Endpoint para limpiar usuarios de prueba
+@app.delete("/test/clean-test-users")
+async def clean_test_users(db: Session = Depends(get_db)):
+    try:
+        print("🧹 Limpiando usuarios de prueba...")
+        
+        # Lista de emails de usuarios de prueba
+        test_emails = [
+            "maria@test.com",
+            "carlos@test.com", 
+            "ana@test.com",
+            "juan@test.com",
+            "laura@test.com",
+            "test1@test.com",
+            "test2@test.com",
+            "test3@test.com",
+            "testuser1",
+            "testuser2", 
+            "testuser3"
+        ]
+        
+        deleted_users = []
+        deleted_likes = 0
+        deleted_matches = 0
+        
+        for email in test_emails:
+            # Buscar usuario por email
+            user = db.query(models.User).filter(models.User.email == email).first()
+            
+            if not user:
+                # Buscar por username si no se encuentra por email
+                user = db.query(models.User).filter(models.User.username == email).first()
+            
+            if user:
+                print(f"🗑️ Eliminando usuario: {user.username} ({user.email})")
+                
+                # Eliminar likes relacionados
+                likes_to_delete = db.query(models.Like).filter(
+                    (models.Like.user_id == user.id) | (models.Like.liked_user_id == user.id)
+                ).all()
+                for like in likes_to_delete:
+                    db.delete(like)
+                    deleted_likes += 1
+                
+                # Eliminar matches relacionados
+                matches_to_delete = db.query(models.Match).filter(
+                    (models.Match.user1_id == user.id) | (models.Match.user2_id == user.id)
+                ).all()
+                for match in matches_to_delete:
+                    db.delete(match)
+                    deleted_matches += 1
+                
+                # Eliminar el usuario
+                db.delete(user)
+                deleted_users.append(f"{user.username} ({user.email})")
+        
+        db.commit()
+        
+        print(f"✅ Usuarios de prueba eliminados: {len(deleted_users)}")
+        print(f"✅ Likes eliminados: {deleted_likes}")
+        print(f"✅ Matches eliminados: {deleted_matches}")
+        
+        return {
+            "success": True,
+            "message": f"Limpieza completada: {len(deleted_users)} usuarios eliminados",
+            "deleted_users": deleted_users,
+            "deleted_likes": deleted_likes,
+            "deleted_matches": deleted_matches
+        }
+        
+    except Exception as e:
+        print(f"❌ Error limpiando usuarios de prueba: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Forzar reinicio de Railway - 2025-07-01
 
 if __name__ == "__main__":
