@@ -415,7 +415,7 @@ async def get_compatible_users_route(
                 "age": user_age,
                 "location": user.location or "Buenos Aires",
                 "bio": user.descripcion or "Amante del deporte",
-                "foto_url": user.foto_url or "",
+                "foto_url": user.foto_url or "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face",
                 "video_url": user.video_url or "",
                 "sports": user_sports,  # Array de objetos
                 "compatibility_score": compatibility_score,
