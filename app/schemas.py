@@ -14,6 +14,8 @@ class UserBase(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
     sports: Optional[str] = None
+    whatsapp: Optional[str] = None
+    phone: Optional[str] = None
 
 class UserCreate(BaseModel):
     username: str
@@ -28,6 +30,8 @@ class UserCreate(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
     sports: Optional[str] = None
+    whatsapp: Optional[str] = None
+    phone: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -46,6 +50,8 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
     sports: Optional[str] = None
+    whatsapp: Optional[str] = None
+    phone: Optional[str] = None
 
 class User(UserBase):
     id: int
