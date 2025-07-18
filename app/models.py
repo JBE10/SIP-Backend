@@ -18,6 +18,9 @@ class User(Base):
     video_url = Column(String(255))
     age = Column(Integer)
     location = Column(String(100))
+    instagram = Column(String(100))
+    whatsapp = Column(String(20))
+    phone = Column(String(20))
 
 class Like(Base):
     __tablename__ = "likes"
@@ -42,5 +45,19 @@ class Match(Base):
     # Relaciones
     user1 = relationship("User", foreign_keys=[user1_id])
     user2 = relationship("User", foreign_keys=[user2_id])
+
+class Message(Base):
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+    
+    # Relaciones
+    match = relationship("Match")
+    sender = relationship("User", foreign_keys=[sender_id])
 
 # Las tablas Like y Match pueden quedarse si existen en Railway, si no, comentarlas o eliminarlas temporalmente.

@@ -134,6 +134,9 @@ def update_profile(
             "location": user.location,
             "descripcion": user.descripcion,
             "foto_url": user.foto_url,
-            "deportes_preferidos": user.deportes_preferidos
+            "deportes_preferidos": user.deportes_preferidos,
+            "instagram": user.instagram,
+            "whatsapp": user.whatsapp,
+            "phone": user.phone
         }
     }

@@ -244,7 +244,10 @@ def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
         "foto_url": current_user.foto_url,
         "video_url": current_user.video_url,
         "deportes_preferidos": current_user.deportes_preferidos or "",
-        "sports": parse_sports(current_user.deportes_preferidos or "")  # Formato array para el frontend
+        "sports": parse_sports(current_user.deportes_preferidos or ""),  # Formato array para el frontend
+        "instagram": current_user.instagram,
+        "whatsapp": current_user.whatsapp,
+        "phone": current_user.phone
     }
 
 @app.put("/users/me", response_model=schemas.User)
@@ -324,6 +327,44 @@ async def get_matches(
         
     except Exception as e:
         print(f"❌ Error obteniendo matches: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/matches/{user_id}")
+def get_user_matches(user_id: int, db: Session = Depends(get_db)):
+    """Obtiene todos los matches de un usuario con información completa"""
+    try:
+        matches = db.query(models.Match).filter(
+            (models.Match.user1_id == user_id) | (models.Match.user2_id == user_id)
+        ).all()
+        
+        matches_data = []
+        
+        for match in matches:
+            # Determinar quién es el otro usuario
+            other_user_id = match.user2_id if match.user1_id == user_id else match.user1_id
+            other_user = db.query(models.User).filter(models.User.id == other_user_id).first()
+            
+            if other_user:
+                matches_data.append({
+                    "match_id": match.id,
+                    "user": {
+                        "id": other_user.id,
+                        "username": other_user.username,
+                        "age": other_user.age,
+                        "location": other_user.location,
+                        "descripcion": other_user.descripcion,
+                        "foto_url": other_user.foto_url,
+                        "video_url": other_user.video_url,
+                        "deportes_preferidos": other_user.deportes_preferidos,
+                        "instagram": other_user.instagram,
+                        "whatsapp": other_user.whatsapp,
+                        "phone": other_user.phone
+                    },
+                    "created_at": match.created_at
+                })
+        
+        return {"matches": matches_data}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # Endpoint para obtener usuarios compatibles
@@ -456,10 +497,18 @@ async def like_user(
         ).first()
         
         if existing_like:
+            # Revisar si ya hay match
+            match_already_exists = db.query(models.Match).filter(
+                ((models.Match.user1_id == current_user.id) & (models.Match.user2_id == user_id)) |
+                ((models.Match.user1_id == user_id) & (models.Match.user2_id == current_user.id))
+            ).first()
+            is_match = False
+            if match_already_exists:
+                is_match = True
             return {
                 "success": True,
-                "is_match": False,
-                "message": "Ya le diste like a este usuario"
+                "is_match": is_match,
+                "message": "Ya le diste like a este usuario" + (" y es un match!" if is_match else "")
             }
         
         # Crear el like
@@ -468,26 +517,39 @@ async def like_user(
             liked_user_id=user_id
         )
         db.add(new_like)
-        
+
         # Verificar si hay match (like mutuo)
         mutual_like = db.query(models.Like).filter(
             models.Like.user_id == user_id,
             models.Like.liked_user_id == current_user.id
         ).first()
-        
+
         is_match = False
-        if mutual_like:
-            # Crear el match
+        match_already_exists = db.query(models.Match).filter(
+            ((models.Match.user1_id == current_user.id) & (models.Match.user2_id == user_id)) |
+            ((models.Match.user1_id == user_id) & (models.Match.user2_id == current_user.id))
+        ).first()
+        if mutual_like and not match_already_exists:
+            print(f"Intentando crear match entre {current_user.id} y {user_id}")
             new_match = models.Match(
                 user1_id=min(current_user.id, user_id),
                 user2_id=max(current_user.id, user_id)
             )
             db.add(new_match)
             is_match = True
-            print(f"🎉 ¡MATCH! Entre usuario {current_user.id} y usuario {user_id}")
-        
-        db.commit()
-        
+            print(f"🎉 ¡MATCH creado! Entre usuario {current_user.id} y usuario {user_id}")
+        elif mutual_like and match_already_exists:
+            is_match = True
+            print(f"⚠️ Match ya existía entre usuario {current_user.id} y usuario {user_id}")
+
+        db.commit()  # Solo un commit aquí, después de todos los adds
+
+        # Imprimir el contenido de la tabla matches
+        all_matches = db.query(models.Match).all()
+        print(f"📋 Contenido actual de la tabla matches:")
+        for m in all_matches:
+            print(f"Match: id={m.id}, user1_id={m.user1_id}, user2_id={m.user2_id}, created_at={m.created_at}")
+
         return {
             "success": True,
             "is_match": is_match,
@@ -1096,6 +1158,49 @@ async def clean_test_users(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Forzar reinicio de Railway - 2025-07-01
+
+@app.post("/messages/")
+def create_message(message: dict, db: Session = Depends(get_db)):
+    """Crea un nuevo mensaje"""
+    try:
+        new_message = models.Message(
+            match_id=message["match_id"],
+            sender_id=message["sender_id"],
+            content=message["content"]
+        )
+        db.add(new_message)
+        db.commit()
+        db.refresh(new_message)
+        return {"message": "Mensaje enviado", "id": new_message.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/messages/{match_id}")
+def get_match_messages(match_id: int, db: Session = Depends(get_db)):
+    """Obtiene todos los mensajes de un match"""
+    try:
+        messages = db.query(models.Message).filter(
+            models.Message.match_id == match_id
+        ).order_by(models.Message.created_at).all()
+        
+        messages_data = []
+        for msg in messages:
+            sender = db.query(models.User).filter(models.User.id == msg.sender_id).first()
+            messages_data.append({
+                "id": msg.id,
+                "content": msg.content,
+                "created_at": msg.created_at,
+                "is_read": msg.is_read,
+                "sender": {
+                    "id": sender.id,
+                    "username": sender.username,
+                    "foto_url": sender.foto_url
+                } if sender else None
+            })
+        
+        return {"messages": messages_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
