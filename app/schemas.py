@@ -16,6 +16,7 @@ class UserBase(BaseModel):
     sports: Optional[str] = None
     whatsapp: Optional[str] = None
     phone: Optional[str] = None
+    instagram: Optional[str] = None
 
 class UserCreate(BaseModel):
     username: str
@@ -32,6 +33,7 @@ class UserCreate(BaseModel):
     sports: Optional[str] = None
     whatsapp: Optional[str] = None
     phone: Optional[str] = None
+    instagram: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -52,6 +54,7 @@ class UserUpdate(BaseModel):
     sports: Optional[str] = None
     whatsapp: Optional[str] = None
     phone: Optional[str] = None
+    instagram: Optional[str] = None
 
 class User(UserBase):
     id: int

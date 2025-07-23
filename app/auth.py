@@ -100,7 +100,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         foto_url=user.foto_url,
         video_url=user.video_url,
         age=user.age,
-        location=user.location
+        location=user.location,
+        instagram=user.instagram,
+        whatsapp=user.whatsapp,
+        phone=user.phone
     )
     db.add(new_user)
     db.commit()
