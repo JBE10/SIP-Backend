@@ -16,11 +16,15 @@ def calculate_compatibility_score(user1: models.User, user2: models.User) -> flo
     sports2_str = user2.deportes_preferidos
     sports1 = sports1_str.split(',') if sports1_str else []
     sports2 = sports2_str.split(',') if sports2_str else []
-    
+
     if sports1 and sports2:
-        common_sports = set([s.strip() for s in sports1]) & set([s.strip() for s in sports2])
-        if common_sports:
-            score += 40 * (len(common_sports) / max(len(sports1), len(sports2)))
+        set1 = set([s.strip().lower() for s in sports1])
+        set2 = set([s.strip().lower() for s in sports2])
+        if set1 == set2:
+            score += 40
+        else:
+            common_sports = set1 & set2
+            score += 40 * (len(common_sports) / max(len(set1), len(set2)))
     
     # 2. Ubicación (30 puntos)
     if user1.location and user2.location:
