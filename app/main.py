@@ -30,18 +30,10 @@ try:
 except Exception as e:
     print(f"❌ Error creando tablas: {e}")
 
-# CORS para permitir conexión desde Vercel y Railway
-origins = [
-    "https://sip-gray.vercel.app",
-    "https://sportsmatch.vercel.app",
-    "https://sip-production.up.railway.app",
-    "http://localhost:3000",
-    "http://localhost:3001"
-]
-
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Cambia esto por tu dominio frontend en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -333,6 +325,22 @@ async def get_matches(
 def get_user_matches(user_id: int, db: Session = Depends(get_db)):
     """Obtiene todos los matches de un usuario con información completa"""
     try:
+        def parse_sports(sports_str):
+            if not sports_str:
+                return []
+            deportes = []
+            for item in sports_str.split(","):
+                item = item.strip()
+                if "(" in item and ")" in item:
+                    nombre, nivel = item.rsplit("(", 1)
+                    deportes.append({
+                        "sport": nombre.strip(),
+                        "level": nivel.replace(")", "").strip()
+                    })
+                elif item:
+                    deportes.append({"sport": item, "level": "Principiante"})
+            return deportes
+        
         matches = db.query(models.Match).filter(
             (models.Match.user1_id == user_id) | (models.Match.user2_id == user_id)
         ).all()
@@ -356,6 +364,7 @@ def get_user_matches(user_id: int, db: Session = Depends(get_db)):
                         "foto_url": other_user.foto_url,
                         "video_url": other_user.video_url,
                         "deportes_preferidos": other_user.deportes_preferidos,
+                        "sports": parse_sports(other_user.deportes_preferidos or ""),
                         "instagram": other_user.instagram,
                         "whatsapp": other_user.whatsapp,
                         "phone": other_user.phone
